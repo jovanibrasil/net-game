@@ -4,11 +4,11 @@ const char* description(int type){
 
     switch(type){
         case MAP:
-            return "Eu sou um belo mapinha.";
+            return "Mapa da saída secreta.";
         case FLASHLIGHT:
-            return "Eu sou uma bela lanterninha.";
+            return "Lanterna com bateria infinita.";
         case KEY: 
-            return "Eu sou uma bela chavezinha.";
+            return "Chave secreta multiuso.";
 		default:
 			return "[x] Tipo de objeto inválido.";
     }
@@ -121,11 +121,11 @@ int get_cmd_type(char cmd[]){
         return INVENTORY;
     }else if(!strcmp(cmd_aux, "ajuda")){
     	return HELP;
-    }else{
+	}else if(!strcmp(cmd_aux, "usar")){
+		return USE;
+	}else{
 		return INVALID_ARG;
 	}	
-
-    // ...
 
 }
 
@@ -147,8 +147,6 @@ int get_obj_type(char cmd[]){
     }else{
 		return INVALID_ARG;		
 	}
-
-    // ...
 
 }
 
@@ -214,13 +212,16 @@ int to_string_player_itens(struct player *p, char *buffer, int buffer_offset){
     
     char str[100];
 
-    strcpy(str, "Meus itens:\n");
+   	if(iit == NULL){
+		strcpy(str, "Inventário vazio!\n");
+	}else{
+		strcpy(str, "Meus itens:\n");
+	}
 
     while(iit != NULL){
-        strcat(str, description(iit->my_item->type));
+        strcat(str, name(iit->my_item->type));
         strcat(str, "\n"); 
         iit = iit->next_item;
-
     }
 
     int size = strlen(str);
@@ -303,7 +304,11 @@ int to_string_room_itens(struct room *rm, char *buffer, int offset){
     
     char str[100];
 
-    strcpy(str, "\nItens na sala:\n");
+	if(iit == NULL){
+		strcpy(str, "\nNão existem itens na sala!\n");
+	}else{
+		strcpy(str, "\nItens na sala:\n");
+	}
 
     while(iit != NULL){
         strcat(str, name(iit->my_item->type));
@@ -489,4 +494,28 @@ struct item* get_player_item_by_id(struct player *p, int object_id){
 
 }
 
+int game_help(char *buffer, int buffer_offset){
+
+    printf("[v] Requisição do player por ajuda.\n");
+
+    char str[200];
+
+	strcpy(str, "Comandos:.\n");
+
+	strcat(str, "Examinar [sala/objeto]\n");
+	strcat(str, "Mover [N/S/L/O]\n");
+	strcat(str, "Pegar [objeto]\n");
+	strcat(str, "Largar [objeto]\n");
+	strcat(str, "Inventário\n");
+	strcat(str, "Usar [objeto] {alvo}\n");
+	strcat(str, "Falar [texto]\n");
+	strcat(str, "Cochichar [texto] [jogador]\n");
+	strcat(str, "Ajuda\n");	
+
+    int size = strlen(str);
+    memcpy(buffer, str, size);    
+
+    return size;
+
+}
 

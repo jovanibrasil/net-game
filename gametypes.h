@@ -19,8 +19,8 @@
 
 // Estados de objetos.
 
-#define LIGHT_ON 100
-#define LIGHT_OFF -100
+#define LIGHT_ON 1
+#define LIGHT_OFF 0
 
 // Ações do player.
 
@@ -30,6 +30,7 @@
 #define MOVE        0x03
 #define INVENTORY   0x04
 #define HELP	    0x05
+#define USE			0x06
 
 #define ROOM 		54
 #define NORTH   	55
@@ -44,6 +45,8 @@ struct item {
 
     int type;  // Tipo do Item.
     int id;
+	int state; // 1 e 0 para definir se está sendo usado.
+			   // Quando o objeto não usa, deve ser -1.
 
 };
 

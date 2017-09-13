@@ -71,4 +71,6 @@ struct player* get_player_by_id(struct player *p, int player_id);
 struct item* get_room_item_by_type(struct room *r, int object_id);
 struct item* get_player_item_by_id(struct player *p, int object_id);
 
+int game_help(char *buffer, int buffer_offset);
+
 #endif

@@ -25,12 +25,12 @@
 #include "netutils.h"
 #include "nettypes.h"
 
-#define DESTMAC0	0x00
+#define DESTMAC0	0x08
 #define DESTMAC1	0x00
-#define DESTMAC2	0x00
-#define DESTMAC3	0x00
-#define DESTMAC4	0x00
-#define DESTMAC5	0x00
+#define DESTMAC2	0x27
+#define DESTMAC3	0xd0
+#define DESTMAC4	0x9a
+#define DESTMAC5	0x92
 
 /*
  * Envia um ARP_REQUEST em broadcast no enlace e aguarda por um ARP_REPLY.
