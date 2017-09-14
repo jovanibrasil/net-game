@@ -10,6 +10,9 @@
  *
  */
 
+#define TRUE 1
+#define FALSE 0
+
 #define MAP 0
 #define FLASHLIGHT 1
 #define KEY 2
@@ -32,6 +35,9 @@
 #define HELP	    0x05
 #define USE			0x06
 
+#define LOGIN		0x07
+#define NEXT		0x08
+
 #define ROOM 		54
 #define NORTH   	55
 #define SOUTH   	45
@@ -40,6 +46,10 @@
 
 #define OPEN 		60
 #define CLOSE  		61
+
+#define STAGE0 		0
+#define STAGE1		1
+
 
 struct item {
 
@@ -63,6 +73,7 @@ struct door {
     struct room *room0; // Ponteiros para as salas que a porta liga.
     struct room *room1;
     char description[16];
+	int is_end;
 
 };
 
@@ -92,6 +103,7 @@ struct player {
     struct player *next_player;
     char name[20];
     int id;
+	int stage;
 
 };
 

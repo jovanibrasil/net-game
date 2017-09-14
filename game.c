@@ -1,5 +1,46 @@
 #include "game.h"
 
+
+const char* stage_intro(int stage){
+
+    switch(stage){
+        case STAGE0:
+            return "STAGE 0 \n	Você deu mole e agora está perdido dentro de um castelo. Tente se salvar, mas cuidado, esse castelo guarda muitas supresas. A saída deste nível fica na porta leste da sala C.\n";
+        case STAGE1:
+            return "STAGE 1 \n	Saia deste nível. A saída fica na porta norte da sala E.\n";
+		default:
+			return "[x] Identificador da fase inválido.";
+    }
+
+}
+
+const char* stage_final(int stage){
+
+    switch(stage){
+        case STAGE0:
+            return "Muito bem! \n	Este nível foi fácil. Vamos ver como você se sai no proximo.\n Digite proximo para seguir para o próximo nível.";
+        case STAGE1:
+            return "Muito bem! \n	Você saiu do castelo. Na verdade você se deu bem pois não tive tempo de fazer mais fases. Digite proximo para voltar ao inicio.";
+		default:
+			return "[x] Identificador de fase inválido.";
+    }
+
+}
+
+const char* get_map(int stage){
+
+    switch(stage){
+        case STAGE0:
+            return "\n----- ------- -----\n| D |=|  B  |=| C |\n----- ------- -----\n        | |\n       -----\n       | A |\n       -----\n";
+
+        case STAGE1:
+            return "\n-----\n| E |\n-----\n  ||\n----- ------- -----\n| D |=|  B  |=| C |\n----- ------- -----\n        | |\n       -----\n       | A |\n       -----\n";
+		default:
+			return "[x] Identificador de fase inválido.";
+    }
+
+}
+
 const char* description(int type){
 
     switch(type){
@@ -123,6 +164,10 @@ int get_cmd_type(char cmd[]){
     	return HELP;
 	}else if(!strcmp(cmd_aux, "usar")){
 		return USE;
+	}else if(!strcmp(cmd_aux, "proximo")){
+    	return NEXT;
+	}else if(!strcmp(cmd_aux, "login")){
+		return LOGIN;
 	}else{
 		return INVALID_ARG;
 	}	
@@ -136,7 +181,6 @@ int get_obj_type(char cmd[]){
 	printf("[v] cmd_param lowered = %s.\n", cmd_aux);
 
     if(!strcmp(cmd_aux, "mapa")){
-		printf(" %s é um mapa\n", cmd_aux);
         return MAP;
     }else if(!strcmp(cmd_aux, "lanterna")){
         return FLASHLIGHT;
@@ -253,7 +297,8 @@ void init_player(struct player **p, int id, char name[16], struct room *actual_r
     (*p)->inventory = NULL;
     (*p)->id = id;
     (*p)->actual_room = actual_room;
-    strcpy((*p)->name, name); ;
+    (*p)->stage = STAGE0;
+	strcpy((*p)->name, name); ;
 
 }
 
@@ -347,7 +392,7 @@ void add_door(struct room  *r, struct room_door *rd){
         
 } 
 
-void init_door(struct room  *ra, int dir_a, struct room *rb, int dir_b, int state){
+void init_door(struct room  *ra, int dir_a, struct room *rb, int dir_b, int state, int is_end){
 
     printf("[v] Inicializando porta entre %s e %s.\n", ra->description, rb->description);
 
@@ -356,6 +401,7 @@ void init_door(struct room  *ra, int dir_a, struct room *rb, int dir_b, int stat
     d->state = state;
     d->room0 = ra;
     d->room1 = rb;
+	d->is_end = is_end;
 
     struct room_door *rd_a = malloc(sizeof(struct room_door)); 
     rd_a->door = d;

@@ -8,16 +8,14 @@
  *
  * It1 - respondendo
  *
- * TODO printf("Examinar [sala/objeto]\n");
- * TODO printf("Mover [N/S/L/O]\n");
- * TODO printf("Pegar [objeto]\n");
- * TODO printf("Largar [objeto]\n");
- * TODO printf("Inventário\n");
- * TODO printf("Usar [objeto] {alvo}\n");
- * TODO printf("Falar [texto]\n");
- * TODO printf("Cochichar [texto] [jogador]\n");
- * printf("Ajuda\n");	
+ * usar.
  *
+ * checksum.
+ *
+ * TODO printf("Falar [texto]\n");
+ * TODO printf("Cochichar [texto] [jogador]\n");	
+ *
+ * refatoração.
  *
  */
 
@@ -164,6 +162,14 @@ int server_examine(int player_id, char *object_name, struct player *player_list,
 
 				if(it){
 					strcpy(str, description(it->type));
+					
+					if(it->type == MAP){
+						strcat(str, get_map(p->stage));
+						strcat(str, "Você está na sala ");
+						strcat(str, p->actual_room->description);
+						strcat(str, ".\n");
+					}
+					
 					int size = strlen(str);
     				memcpy(buffer, str, size);    
 					return size;
@@ -198,13 +204,99 @@ int server_catch(int player_id, char *object_name, struct player *player_list, c
 			printf("[v] Objeto inserido no inventario do player %d.\n", player_id);
 			strcpy(str ,"Objeto inserido no inventario.\n");
         }else{
-			printf("[x] Objeto não pode ser pego.\n");
-			strcpy(str ,"Objeto não pode ser pego.\n");
+			printf("[x] Objeto não pode ser pego. Ele não existe.\n");
+			strcpy(str ,"Objeto inexistente.\n");
 		}
     }else{
-		printf("[x] Usuário inválido.\n");
-		strcpy(str ,"Objeto não pode ser pego.\n");
+		printf("[x] Usuário inválido. Usuário inválido.\n");
+		strcpy(str ,"Objeto não pode ser pego. Usuário inválido.\n");
 	}	
+
+	int size = strlen(str);
+	memcpy(buffer, str, size);    
+	return size;
+}
+
+int server_init_stage(int stage, struct player **p, char player_name[], char *buffer){
+
+    printf("[] Inicializando fase %d.\n", stage);
+
+ 	char str[200];
+
+	struct item *fl0 = malloc(sizeof(struct item)); // Aloca uma lanterna.
+	fl0->type = FLASHLIGHT;
+	fl0->id = 0;
+	fl0->state = 0;
+
+	struct item *k0 = malloc(sizeof(struct item)); // Aloca uma chave.
+	k0->type = KEY;
+	k0->id = 1;
+	k0->state = -1;
+
+	struct item *mp0 = malloc(sizeof(struct item)); // Aloca um mapa.
+	mp0->type = MAP;
+	mp0->id = 2;
+	mp0->id = -1;
+
+	struct room *rm_a = NULL;   // Aloca uma sala.
+	init_room(&rm_a, LIGHT_ON, "Sala A");
+	add_room_item(rm_a, mp0);
+	add_room_item(rm_a, k0); 
+	add_room_item(rm_a, fl0);
+
+	struct room *rm_b = NULL; // Aloca mais uma sala.
+	init_room(&rm_b, LIGHT_ON, "Sala B");
+	add_room_item(rm_b, fl0);
+	init_door(rm_a, NORTH, rm_b, SOUTH, OPEN, FALSE); // Inicializa porta aberta.    
+
+	struct room *rm_c = NULL; // Aloca mais uma sala.
+	init_room(&rm_c, LIGHT_OFF, "Sala C");
+	init_door(rm_b, EAST, rm_c, WEST, CLOSE, FALSE); // Inicializa porta fechada.    
+
+	struct room *rm_d = NULL; // Aloca mais uma sala.
+	init_room(&rm_d, LIGHT_ON, "Sala D");
+	init_door(rm_b, WEST, rm_d, EAST, OPEN, FALSE); // Inicializa porta aberta.    
+
+	if(stage == STAGE0){
+
+		struct room *rm_z = NULL; // Aloca mais uma sala.
+		init_room(&rm_z, LIGHT_OFF, "Sala Z");
+		init_door(rm_c, EAST, rm_z, WEST, CLOSE, TRUE); // Inicializa porta fechada.    
+		
+		init_player(p, 0, player_name, rm_a);    
+
+	}else if(stage == STAGE1){
+
+		struct room *rm_e = NULL; // Aloca mais uma sala.
+		init_room(&rm_e, LIGHT_ON, "Sala E");
+		init_door(rm_d, NORTH, rm_e, SOUTH, CLOSE, FALSE); // Inicializa porta fechada. 
+
+		struct room *rm_z = NULL; // Aloca mais uma sala.
+		init_room(&rm_z, LIGHT_OFF, "Sala Z");
+		init_door(rm_e, NORTH, rm_z, SOCK_RAW, OPEN, TRUE); // Inicializa porta fechada.    
+
+		init_player(p, 0, player_name, rm_a);    
+
+	}
+	
+	(*p)->stage = stage;
+	strcpy(str, stage_intro(stage));
+
+	int size = strlen(str);
+	memcpy(buffer, str, size);    
+	return size;
+
+}
+
+int server_login(struct player **p, char player_name[], char *buffer){
+
+    printf("Requisição para login do jogador!.\n");
+
+ 	char str[200];
+
+	server_init_stage(0, p, player_name, buffer);
+
+	strcpy(str, stage_intro(0));
 
 	int size = strlen(str);
 	memcpy(buffer, str, size);    
@@ -245,12 +337,8 @@ int server_move(int player_id, char dir_str[20], struct player *players_list, ch
 
  	char str[200];
 
-	printf("%s\n", dir_str);
-
 	int dir_type = get_dir_type(dir_str);
 	struct player *p = get_player_by_id(players_list, player_id);
-
-	printf("dir_type = %d\n", dir_type);
 
 	if(dir_type < 0){
 		printf("[x] Argumento invalido.\n");
@@ -266,25 +354,43 @@ int server_move(int player_id, char dir_str[20], struct player *players_list, ch
 			// Se a porta é na direção pedida.
 			if(rd_aux->dir == dir_type){
 	
-				// TODO porta fechada?
+				if(rd_aux->door->state == CLOSE){	
+					strcpy(str, "Impossível mover. Porta fechada.\n");
+				}else{
 
-				if(!strcmp(p->actual_room->description, rd_aux->door->room1->description))
-					p->actual_room = rd_aux->door->room0;				
-				else
-					p->actual_room = rd_aux->door->room1;
+					if(rd_aux->door->is_end){				
+						
+						strcpy(str, stage_final(p->stage));
+						
+						// Troca de fase. Processo manual pq só tenho duas fases.
+						if(p->stage == STAGE0)
+							p->stage = STAGE1;
+					   	else
+							p->stage = STAGE0;	
+					
+					}else{		
+
+						if(!strcmp(p->actual_room->description, rd_aux->door->room1->description))
+							p->actual_room = rd_aux->door->room0;				
+						else
+							p->actual_room = rd_aux->door->room1;
 				
-				strcpy(str, "Moveu para a ");
-				strcat(str, p->actual_room->description);
-				strcat(str, ".\n");
-				break;
+						strcpy(str, "Moveu para a ");
+						strcat(str, p->actual_room->description);
+						strcat(str, ".\n");
+					}
+
+				}
+				
+				int size = strlen(str);
+				memcpy(buffer, str, size);    
+    			return size;
+
 			}	
-        	
 			rd_aux = rd_aux->next_door;
 		}
-
-		// TODO
-		//strcpy(str, "Direção inválida ou porta não existe.\n");
-		//printf("[x] Direção inválida ou porta não existe.\n");
+	
+		strcpy(str, "Não existe porta na direção especificada.\n");
 
     }else{
 		printf("[x] Player não encontrdo no servidor.\n");
@@ -297,9 +403,11 @@ int server_move(int player_id, char dir_str[20], struct player *players_list, ch
 
 }
 
-int server_use(int player_id, char *obj_name, char *targ_name, struct player *player_list){
+int server_use(int player_id, char *obj_name, char *targ_name, struct player *player_list, char *buffer){
 
     printf("[v] Requisição do player %d para usar item.\n", player_id);
+
+ 	char str[200];
 
 	int object_id = get_obj_type(obj_name);
 	int target_id = get_obj_type(targ_name);
@@ -307,17 +415,22 @@ int server_use(int player_id, char *obj_name, char *targ_name, struct player *pl
     struct player *p = get_player_by_id(player_list, player_id);
 	struct item *i = get_player_item_by_id(p, object_id);
 
-	if(object_id == FLASHLIGHT){
+	if(i == NULL){
+		strcpy(str, "Você não possui este item.\n");	
+	}else if(object_id == FLASHLIGHT){
 		if(i->state){
+			strcpy(str, "Lanterna foi desligada.\n");	
 			i->state = 0;
 		}else{
+			strcpy(str, "Lanterna foi ligada.\n");
 			i->state = 1;
 		}		
 	}else if(object_id == KEY){
-		// get door by dir
 		
 		struct room_door *rd_aux = p->actual_room->doors;
 		int dir_type = get_dir_type(targ_name);
+
+		int aux = TRUE;
 
 		// Percorre a lista de portas.
 		while(rd_aux){
@@ -325,17 +438,25 @@ int server_use(int player_id, char *obj_name, char *targ_name, struct player *pl
 			// Se a porta é na direção pedida.
 			if(rd_aux->dir == dir_type){
 				rd_aux->door->state = OPEN;
-				return 0;
+				strcpy(str, "Porta foi aberta.\n");
+				aux = FALSE;
 			}	
         	
 			rd_aux = rd_aux->next_door;
 		}
 
+		if(aux){
+			strcpy(str, "Porta não encontrada.\n");
+		}
+
 	}else{
+		strcpy(str, "Objeto inválido.\n");
 		printf("[x] Objeto inválido!\n");
 	}	
 
-    return 0;
+	int size = strlen(str);
+	memcpy(buffer, str, size);    
+    return size;
 
 }
 
@@ -353,17 +474,11 @@ void server_move_response(int sock, unsigned char *data, int data_size, char *ds
 
 	memcpy(value, &data[offset], name_size);	
 			
-	// TODO Troca nomes
-
 	printf("[v] Respondendo requisição de mover.\n");
-
-	//struct Jogador *player = (struct Jogador*)users+data_h.id*sizeof(struct Jogador);
 	
 	unsigned char *help_data = malloc(300);
-
-	//int payload_size = move(*player, value, help_msg); 	
+ 	
 	int payload_size = server_move(0, value, player_list, buffer);
-
 	int header_size = sizeof(struct data_t);
 
 	memset(help_data, 0, 0);
@@ -382,6 +497,8 @@ void server_move_response(int sock, unsigned char *data, int data_size, char *ds
 
 void server_catch_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *player_list, char *buffer, int buffer_offset){
 
+	printf("[v] Respondendo requisição de examinar.\n");
+
 	struct data_t data_h;
 	memcpy(&data_h, data, sizeof(struct data_t));	
 	int offset = sizeof(struct data_t);
@@ -391,18 +508,122 @@ void server_catch_response(int sock, unsigned char *data, int data_size, char *d
 	//value[name_size] = '\0';
 
 	memcpy(value, &data[offset], name_size);	
-		
-	printf("[v] Respondendo requisição de examinar.\n");
-	
-
+			
 	unsigned char *help_data = malloc(300);
 
 	printf("%s\n", value);
 
 	int payload_size = server_catch(0, value, player_list, buffer);
+	int header_size = sizeof(struct data_t);
 
-	//int payload_size = server_examine(0, value, player_list, buffer, buffer_offset);	
-	
+	memset(help_data, 0, 0);
+
+	struct data_t *data_header = (struct data_t*)(help_data);
+	data_header->cmd = data_h.cmd;
+	data_header->id = data_h.id;
+	data_header->ack = 1;
+	data_header->off = 0;
+
+	memcpy(&help_data[header_size], buffer, payload_size);	
+	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
+
+}
+
+void server_next_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player **p, char *buffer, int buffer_offset){
+
+	printf("[v] Respondendo requisição de próxima fase.\n");
+
+	struct data_t data_h;
+	memcpy(&data_h, data, sizeof(struct data_t));	
+	int offset = sizeof(struct data_t);
+	int name_size = data_size - sizeof(struct data_t);
+
+	char *value = malloc(sizeof(char) * name_size);
+	//value[name_size] = '\0';
+
+	memcpy(value, &data[offset], name_size);	
+			
+	unsigned char *help_data = malloc(300);
+
+	printf("%s\n", value);
+
+	int payload_size = server_init_stage((*p)->stage, p, (*p)->name, buffer);
+	int header_size = sizeof(struct data_t);
+
+	memset(help_data, 0, 0);
+
+	struct data_t *data_header = (struct data_t*)(help_data);
+	data_header->cmd = data_h.cmd;
+	data_header->id = data_h.id;
+	data_header->ack = 1;
+	data_header->off = 0;
+
+	memcpy(&help_data[header_size], buffer, payload_size);	
+	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
+
+}
+
+void server_login_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player **p, char *buffer, int buffer_offset){
+
+	printf("[v] Respondendo requisição de login.\n");
+
+	struct data_t data_h;
+	memcpy(&data_h, data, sizeof(struct data_t));	
+	int offset = sizeof(struct data_t);
+	int name_size = data_size - sizeof(struct data_t);
+
+	char *value = malloc(sizeof(char) * name_size);
+	//value[name_size] = '\0';
+
+	memcpy(value, &data[offset], name_size);	
+			
+	unsigned char *help_data = malloc(300);
+
+	printf("%s\n", value);
+
+	int payload_size = server_login(p, value, buffer);
+
+	int header_size = sizeof(struct data_t);
+
+	memset(help_data, 0, 0);
+
+	struct data_t *data_header = (struct data_t*)(help_data);
+	data_header->cmd = data_h.cmd;
+	data_header->id = data_h.id;
+	data_header->ack = 1;
+	data_header->off = 0;
+
+	memcpy(&help_data[header_size], buffer, payload_size);	
+	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
+
+}
+
+void server_use_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *p, char *buffer, int buffer_offset){
+
+	printf("[v] Respondendo requisição de uso de objeto.\n");
+
+	struct data_t data_h;
+	memcpy(&data_h, data, sizeof(struct data_t));	
+	int offset = sizeof(struct data_t);
+	int param2_size = data_size - sizeof(struct data_t) - data_h.off;
+	int param1_size = data_size - sizeof(struct data_t) - param2_size;
+
+	char *param1 = malloc(sizeof(char) * param1_size);
+	char *param2 = malloc(sizeof(char) * param2_size);
+
+	memcpy(param1, &data[offset], param1_size);
+	memcpy(param2, &data[offset+param1_size], param2_size);
+			
+	unsigned char *help_data = malloc(300);
+
+	printf("%s\n", param1);
+	printf("%s\n", param2);
+
+	int payload_size = server_use(0, param1, param2, p, buffer);
+
+	printf("%s\n", buffer);
+
+
 	int header_size = sizeof(struct data_t);
 
 	memset(help_data, 0, 0);
@@ -456,16 +677,11 @@ void server_drop_response(int sock, unsigned char *data, int data_size, char *ds
 
 void server_inventory_response(int sock, int user_id, int cmd, char *dst_ip, struct player *player_list){
 
-	// TODO Troca nomes
-
 	printf("[v] Respondendo requisição de invetorio.\n");
-
-	//struct Jogador *player = (struct Jogador*)users+user_id*sizeof(struct Jogador);
 	
 	unsigned char *help_msg = malloc(200);
 	unsigned char *help_data = malloc(300);
 
-	// int payload_size server_show_inventary(int player_id, struct player *player_list){
  	int payload_size = server_show_inventary(0, player_list, help_msg, 0); 
 
 	printf("%s (size = %d)\n", help_msg, payload_size);
@@ -518,8 +734,7 @@ void server_examine_response(int sock, unsigned char *data, int data_size, char 
 	int name_size = data_size - sizeof(struct data_t);
 
 	char *value = malloc(sizeof(char) * name_size);
-	//value[name_size] = '\0';
-
+	
 	memcpy(value, &data[offset], name_size);	
 		
 	printf("[v] Respondendo requisição de examinar.\n");
@@ -546,69 +761,26 @@ void server_examine_response(int sock, unsigned char *data, int data_size, char 
 
 int main(){
 
-    // Game layer
-
     printf("------------- Simple RPG -------------- \n");
 
-    struct item *fl0 = malloc(sizeof(struct item)); // Aloca uma lanterna.
-    fl0->type = FLASHLIGHT;
-    fl0->id = 0;
-	fl0->state = 0;
-
-    struct item *k0 = malloc(sizeof(struct item)); // Aloca uma chave.
-    k0->type = KEY;
-    k0->id = 1;
-	k0->state = -1;
-
-    struct item *mp0 = malloc(sizeof(struct item)); // Aloca um mapa.
-    mp0->type = MAP;
-    mp0->id = 2;
-	mp0->id = -1;
-
-    struct room *rm_a = NULL;   // Aloca uma sala.
-    init_room(&rm_a, LIGHT_ON, "Sala A");
-    add_room_item(rm_a, mp0);
-    add_room_item(rm_a, k0); 
-    add_room_item(rm_a, fl0);
-
-    // Lista objetos na sala.
-    //char *buffer = malloc(100);
-    //to_string_room_itens(rm_a, buffer, 0);
-    //printf("%s", buffer);
-
-    // Remove um objeto.
-    //remove_room_item(rm_a, k0); 
-
-    // Lista novamente os objetos.
-    //memset(buffer, 0, 100);
-    //to_string_room_itens(rm_a, buffer, 0);
-    //printf("%s", buffer);
-
-    struct room *rm_b = NULL; // Aloca mais uma sala.
-    init_room(&rm_b, LIGHT_ON, "Sala B");
-    add_room_item(rm_b, fl0);
-
-    init_door(rm_a, NORTH, rm_b, SOUTH, OPEN); // Inicializa porta aberta.    
-
-    struct room *rm_c = NULL; // Aloca mais uma sala.
-    init_room(&rm_c, LIGHT_OFF, "Sala C");
-    
-    init_door(rm_b, EAST, rm_c, WEST, CLOSE); // Inicializa porta aberta.    
-
-    struct player *p = NULL;
-    init_player(&p, 0, "Player A", rm_a);    
+    struct player *p = NULL;	
 
     printf("Select the operation mode: server test(t) or server run(r)");
     int c = getchar();
 
     if(c == 't'){
+		
+		/*
+		 * Modo de teste. Utilizado para debug da implementação da lógica
+		 * do jogo.
+		 */
 
         char *input = malloc(sizeof(char) *50);
         char *cmd = malloc(sizeof(char)*50); 
-        // Server receiver simulation - Server layer
+  
         while(1){
 
-            char *param1 = malloc(sizeof(char) *50); 
+		    char *param1 = malloc(sizeof(char) *50); 
             char *param2 = malloc(sizeof(char) *50);   
 
             printf("- Comando:~$\n"); 
@@ -617,38 +789,62 @@ int main(){
 
 			char *buffer = malloc(300*sizeof(char)); 
 
-            switch(get_cmd_type(cmd)){
+			int cmd_aux = get_cmd_type(cmd);
+
+			if(p == NULL && cmd_aux != LOGIN){
+				printf("[x] Player não inicializado.\n");
+				continue;
+			}
+
+            switch(cmd_aux){
                 case EXAMINE:
                     server_examine(0, param1, p, buffer, 0);
-					printf("%s\n", buffer);
+					printf("	[-] %s\n", buffer);
                     break;
                 case INVENTORY:
                     server_show_inventary(0, p, buffer, 0);
-					printf("%s\n", buffer);
+					printf("	[-] %s\n", buffer);
                     break;
                 case CATCH:
                     server_catch(0, param1, p, buffer);
-					printf("%s\n", buffer);
+					printf("	[-] %s\n", buffer);
                     break;
                 case DROP:
                     server_drop(0, param1, p, buffer);
-					printf("%s\n", buffer);
+					printf("	[-] %s\n", buffer);
                     break;
                 case MOVE:
                     server_move(0, param1, p, buffer);
-                    break;
+                    printf("	[-] %s\n", buffer);
+					break;
 				case USE:
-					server_use(0, param1, param2, p);
-                case HELP:
+					server_use(0, param1, param2, p, buffer);
+					printf("	[-] %s\n", buffer);
+					break;
+				case LOGIN:
+					server_login(&p, param1, buffer);
+					printf("	[-] %s\n", buffer);
+					break;
+				case NEXT:
+					server_init_stage(p->stage, &p, p->name, buffer);
+					printf("	[-] %s\n", buffer);
+					break;
+				case HELP:
                     break;
-                default:
-                    printf("Comando desconhecido.\n");
+                //default:
+                //   printf("Comando desconhecido.\n");
             }
 
         }
 
     }else{
- 
+
+		/*
+		 * Modo servidor. Aguarda requisições e encaminha a resposta
+		 * adequada.
+		 *
+		 */
+
 	    int ssock, rsock, data_size;
     
         unsigned char *data;
@@ -658,7 +854,7 @@ int main(){
 
         // Abrindo socket para recebimento de dados.
         printf("[v] Inicializando sockets.\n");
-   		// ETH_P_IP
+   	
    		if((rsock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {	
             printf("Erro na criacao do socket.\n");
             exit(1);
@@ -701,28 +897,21 @@ int main(){
 
             if((data_size = get_packet(rsock, PORT, ITF, -1, data, user_ip, user_mac)) > 0){
 
-                printf("[?] Servidor recebeu uma nova requisição.\n");
-                printf("[?] MAC:");
+                printf("[?] Servidor recebeu uma nova requisição do MAC: ");
                 print_mac(user_mac);
                 printf("  IP: %s\n", user_ip);
 
                 struct data_t data_h;
                 memcpy(&data_h, data, sizeof(struct data_t));	
-                //offset += sizeof(struct data_t);
 
 				char *buffer = malloc(400*sizeof(char));
 
-                // Requisição de login.
-                //if(data_h.cmd == LOGIN){
-                  //  printf("[v] Servidor pediu um pedido de login.\n");	
+				
 
-                //}
-
-                // Se não é uma requisição de login, é necesário verifica se o usuário ja está logado, verificando IP, MAC e ID do usuário. 
-        
-                // TODO Verifica se já está logado.
-
-                // User OK, segue o fluxo dos comandos de jogo.
+				if(p == NULL && data_h.cmd != LOGIN){
+					printf("[x] Player não inicializado.\n");
+					continue;
+				}
 
                 switch(data_h.cmd){
                     case EXAMINE:
@@ -740,19 +929,20 @@ int main(){
                     case INVENTORY:
 						server_inventory_response(ssock, data_h.id, data_h.cmd, user_ip, p);
 						break;
-                    case USE:
-						// TODO
+                    case USE:	
+						server_use_response(ssock, data, data_size, user_ip, p, buffer, 0);
                         break;
-                    //case SPEAK:
-                    //    break;
-                    //case WHISPER:
-                        //send_whisper(sock, data, name_size, data_h.id, data_h.cmd, user_ip, data, users);	
-                        break;
+                    case LOGIN: 
+						server_login_response(ssock, data, data_size, user_ip, &p, buffer, 0);
+						break;
+                    case NEXT: 
+						server_next_response(ssock, data, data_size, user_ip, &p, buffer, 0);
+						break;
                     case HELP:
                         server_help_response(ssock, data_h.cmd, data_h.id, user_ip);
                         break;
-                    default:
-                        printf("[x] Solicitação com código desconhecido\n");
+                    //default:
+                    //    printf("[x] Solicitação com código desconhecido\n");
                 }
 
             }

@@ -14,6 +14,10 @@
  *
  */
 
+
+const char* stage_intro(int stage);
+const char* stage_final(int stage); 
+const char* get_map(int stage);
 const char* description(int type);
 char* lower_case(char cmd[]);
 int get_cmd_type(char cmd[]);    
@@ -44,7 +48,7 @@ int to_string_room_itens(struct room *rm, char *buffer, int buffer_offset);
  */
 
 void add_door(struct room  *r, struct room_door *rd);
-void init_door(struct room  *ra, int pos_a, struct room *rb, int pos_b, int state);    
+void init_door(struct room  *ra, int pos_a, struct room *rb, int pos_b, int state, int is_end);    
 int to_string_room_doors(struct room *rm, char *buffer, int buffer_offset);   
 
 /*
