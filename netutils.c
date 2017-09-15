@@ -143,7 +143,8 @@ int send_udp(int sock, char *dst_ip, u_char mac_dst[6], unsigned char *data, int
 	struct sockaddr_ll sadr_ll;
 	sadr_ll.sll_ifindex = ifreq_i.ifr_ifindex;
 	sadr_ll.sll_halen = ETH_ALEN;
-	sadr_ll.sll_family = htons(PF_PACKET);	
+	sadr_ll.sll_family = htons(PF_PACKET);
+
 	memcpy(sadr_ll.sll_addr, mac_dst, 6);
 
 	// Faz envio do pacote.
@@ -249,7 +250,15 @@ int get_ethernet(unsigned char *buff, char *host_mac, uint32_t host_ip,  int typ
 	memcpy(&ethernet_header, buff, sizeof(ethernet_header));
 
 	// TODO MAC destino do pacote deve ser o MAC do host.
-	memcpy(dst_mac, ethernet_header.ether_shost, 6);
+	//memcpy(dst_mac, ethernet_header.ether_shost, 6);
+
+
+	dst_mac[0] = ethernet_header.ether_shost[0];
+	dst_mac[1] = ethernet_header.ether_shost[1];
+	dst_mac[2] = ethernet_header.ether_shost[2];
+	dst_mac[3] = ethernet_header.ether_shost[3];
+	dst_mac[4] = ethernet_header.ether_shost[4];
+	dst_mac[5] = ethernet_header.ether_shost[5];
 
 	offset += 14;		
 

@@ -140,9 +140,22 @@ int main(int argc,char *argv[]){
 	char itf_name[20];
 	char *input = malloc(sizeof(char) *200);
 
-	printf("Entre com: <mac> <ip> <nome_da_interface> \n"); 
+	printf("Entre com: <mac> <ip> <port> <nome_da_interface> (ou entre com 'default') \n"); 
 	fgets(input, 200, stdin);
 	sscanf(input, "%s %s %s", srv_mac, srv_ip, itf_name);  
+
+	if(!strcmp(srv_mac, "default")){
+		u_char mac_aux[6] =  { 0x08, 0x00 , 0x27 , 0xd0, 0x9a, 0x92 };
+		// Isto é feio :(
+		srv_mac[0] = 0x08;
+		srv_mac[1] = 0x00;
+		srv_mac[2] = 0x27;
+		srv_mac[3] = 0xd0;
+		srv_mac[4] = 0x9a;
+		srv_mac[5] = 0x92;
+		strcpy(srv_ip, "10.0.0.100");
+		strcpy(itf_name, "wlp6s0");
+	}
 
 	char input_login[50];						
 	printf("Informe um Login(máximo 50 caracteres): \n");
@@ -225,7 +238,6 @@ int main(int argc,char *argv[]){
 				break;
 			case  NEXT:
 				send_udp_without_extra_data(ssock, cmd_type, 0, srv_ip, srv_mac, itf_name);
-				break;
 				break;
 			default:
 				continue;
