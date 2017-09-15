@@ -1,25 +1,8 @@
 /*
  *
- * 
- *
- *
- * Considera-se que podem existir n objetos iguais em uma sala,
- * não diferindo em relação aos seus atributos. 
- *
- * It1 - respondendo
- *
- * usar.
- *
- * checksum.
- *
- * TODO printf("Falar [texto]\n");
- * TODO printf("Cochichar [texto] [jogador]\n");	
- *
- * refatoração.
+ * Autor: Jovani Brasil. 
  *
  */
-
-#include "game.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -28,16 +11,6 @@
 #include <sys/ioctl.h>
 #include <string.h>
 #include <unistd.h>
-
-/* Diretorios: net, netinet, linux contem os includes que descrevem as estruturas de dados do header dos protocolos.
- *
- * net/if.h  		- 	Estruturas para gerencia de interfaces de rede.
- * netinet/in_systm.h 	- 	Tipos de dados. 
- * netinet/ether.h 	- 	Estrutura do header ethernet.
- * netinet/in.h 	-	Definicao de protocolos. 
- * arpa/inet.h 		- 	Funcoes para manipulacao de enderecos IP.
- */
-
 #include <net/if.h>  
 #include <netinet/in_systm.h> 
 #include <netinet/ether.h> 
@@ -49,41 +22,18 @@
 #include <netinet/icmp6.h>
 #include <netinet/in.h> 
 #include <arpa/inet.h> 
-
-
 #include <linux/if_packet.h>
 #include <net/ethernet.h>
 
+#include "game.h"
 #include "netutils.h"
 #include "nettypes.h"
 
-void println(char *buff){
 
-	int i;
-	for(i=0;; i++){
-		if(buff[i] == '\0'){
-			printf("\n");
-			return;	
-		}
-		printf("%c", buff[i]);
-	}
-}
 
 void print_mac(unsigned char *mac){
 	printf("  %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
-
-
-
-/*
- * Examina item especifico ou a sala.
- *
- * Se o parametro object_nme for inválido, retorna -1.
- *
- * object_name deve ser "sala" ou algum objeto. 
- *
- *
- */
 
 
 int server_show_inventary(int player_id, struct player *player_list, char *buffer, int buffer_offset){
@@ -100,16 +50,25 @@ int server_show_inventary(int player_id, struct player *player_list, char *buffe
 
 }
 
+/*
+ * Examina item especifico ou a sala.
+ *
+ * Se o parametro object_nme for inválido, retorna -1.
+ *
+ * object_name deve ser "sala" ou algum objeto. 
+ *
+ */
+
 int server_examine(int player_id, char *object_name, struct player *player_list, char *buffer, int buffer_size){
 
- 	char str[200];
+	char str[200];
 
 	// Busca pelo id do objeto a ser buscado.
 	int obj_type = get_obj_type(object_name);
 
 	if(obj_type == INVALID_ARG){
-		printf("[x] Requisisição com parâmetro errado.\n");
-		return -1;
+		printf("[x] O objeto/sala não foi encontrado.\n");
+		strcpy(str, "[x] O objeto/sala não foi encontrado.\n");
 	}else{
 
 		// Busca player pelo id.
@@ -118,73 +77,23 @@ int server_examine(int player_id, char *object_name, struct player *player_list,
     	if(p != NULL){
 
 			if(obj_type == ROOM){
-				
-				printf("[v] Requisição para examinar sala %d.\n", obj_type);
-
-				// Busca por item lanterna no inventario do jogador
-				struct item *it = get_player_item_by_id(p, FLASHLIGHT);
-
-				// Se não há luz e lanterna está desligada
-				if(p->actual_room->light_state == LIGHT_OFF){
-						if(it == NULL){
-    						strcpy(str, "Não há condição de examinar a sala. A luz está apagada e você não tem uma lanterna.\n");
-							int size = strlen(str);
-    						memcpy(buffer, str, size);    
-							return size;
-						}
-						else if(it->state == LIGHT_OFF){
-							strcpy(str ,"Não há condição de examinar a sala. A luz está apagada e você tem uma lanterna, use-a.\n");
-							int size = strlen(str);
-    						memcpy(buffer, str, size);    
-							return size;
-
-						}
-				}
-
-				int len = strlen(p->actual_room->description);  
-
-				memcpy(buffer, p->actual_room->description, len);	
-		
-				int offset = to_string_room_itens(p->actual_room, buffer+len, 0) + len;
-								
-				return to_string_room_doors(p->actual_room, buffer, offset);
-
+				printf("[v] Requisição para examinar sala %d.\n", obj_type);	
+				return game_examine_room(p, NULL, buffer);
 			}else{
-				
 				printf("[v] Requisição para examinar objeto %d.\n", obj_type);
-
-				// Busca objeto na sala em que o player está.
-				struct item *it = get_room_item_by_type(p->actual_room, obj_type);  
-			
-				// Objeto também pode estar no inventário.
-				if(!it)
-					it = get_player_item_by_id(p, obj_type);
-
-				if(it){
-					strcpy(str, description(it->type));
-					
-					if(it->type == MAP){
-						strcat(str, get_map(p->stage));
-						strcat(str, "Você está na sala ");
-						strcat(str, p->actual_room->description);
-						strcat(str, ".\n");
-					}
-					
-					int size = strlen(str);
-    				memcpy(buffer, str, size);    
-					return size;
-			 	}
-
-				printf("[x] Um erro aconteceu ao examinar objetos do jogo.\n");
-				return -1;
+				return game_examine_item(p, obj_type, buffer);
 			}
 
 		}else{
-			printf("[x] Jogador não encontrado.");
+			printf("[x] Jogador não encontrado no servidor (Erro fatal kkkk).");
 			return INVALID_ARG; 
 		}
+
 	}
 		
+	int size = strlen(str);
+	memcpy(buffer, str, size);    
+	return size;
 
 }
 
@@ -319,7 +228,7 @@ int server_drop(int player_id, char *object_name, struct player *players_list, c
             strcpy(str, "Item removido do inventário.\n");
         }else{
 			printf("[x] Item selecionado não encontrado pelo servidor!\n");
-			strcpy(str, "Item não encontrado no servidor.\n");
+			strcpy(str, "Item não encontrado no inventario.\n");
 		}
     }else{
 		printf("[x] Player não encontrado pelo servidor!\n");
@@ -450,8 +359,8 @@ int server_use(int player_id, char *obj_name, char *targ_name, struct player *pl
 		}
 
 	}else{
-		strcpy(str, "Objeto inválido.\n");
-		printf("[x] Objeto inválido!\n");
+		strcpy(str, "Objeto não encontrado no inventário.\n");
+		printf("[x] Objeto não encontrado no inventário!\n");
 	}	
 
 	int size = strlen(str);
@@ -460,76 +369,7 @@ int server_use(int player_id, char *obj_name, char *targ_name, struct player *pl
 
 }
 
-void server_move_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *player_list, char *buffer, int buffer_offset){
-
-	struct data_t data_h;
-	memcpy(&data_h, data, sizeof(struct data_t));	
-	int offset = sizeof(struct data_t);
-	int name_size = data_size - sizeof(struct data_t);
-
-	printf("name size = %d\n", name_size);
-
-	char *value = malloc(sizeof(char) * name_size);
-	//value[name_size] = '\0';
-
-	memcpy(value, &data[offset], name_size);	
-			
-	printf("[v] Respondendo requisição de mover.\n");
-	
-	unsigned char *help_data = malloc(300);
- 	
-	int payload_size = server_move(0, value, player_list, buffer);
-	int header_size = sizeof(struct data_t);
-
-	memset(help_data, 0, 0);
-
-	struct data_t *data_header = (struct data_t*)(help_data);
-	data_header->cmd = data_h.cmd;
-	data_header->id = data_h.id;
-	data_header->ack = 1;
-	data_header->off = 0;
-
-	memcpy(&help_data[header_size], buffer, payload_size);	
-
-	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
-
-}
-
-void server_catch_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *player_list, char *buffer, int buffer_offset){
-
-	printf("[v] Respondendo requisição de examinar.\n");
-
-	struct data_t data_h;
-	memcpy(&data_h, data, sizeof(struct data_t));	
-	int offset = sizeof(struct data_t);
-	int name_size = data_size - sizeof(struct data_t);
-
-	char *value = malloc(sizeof(char) * name_size);
-	//value[name_size] = '\0';
-
-	memcpy(value, &data[offset], name_size);	
-			
-	unsigned char *help_data = malloc(300);
-
-	printf("%s\n", value);
-
-	int payload_size = server_catch(0, value, player_list, buffer);
-	int header_size = sizeof(struct data_t);
-
-	memset(help_data, 0, 0);
-
-	struct data_t *data_header = (struct data_t*)(help_data);
-	data_header->cmd = data_h.cmd;
-	data_header->id = data_h.id;
-	data_header->ack = 1;
-	data_header->off = 0;
-
-	memcpy(&help_data[header_size], buffer, payload_size);	
-	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
-
-}
-
-void server_next_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player **p, char *buffer, int buffer_offset){
+void server_next_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player **p, char *buffer, int buffer_offset, u_char dst_mac[6]){
 
 	printf("[v] Respondendo requisição de próxima fase.\n");
 
@@ -539,7 +379,6 @@ void server_next_response(int sock, unsigned char *data, int data_size, char *ds
 	int name_size = data_size - sizeof(struct data_t);
 
 	char *value = malloc(sizeof(char) * name_size);
-	//value[name_size] = '\0';
 
 	memcpy(value, &data[offset], name_size);	
 			
@@ -559,11 +398,11 @@ void server_next_response(int sock, unsigned char *data, int data_size, char *ds
 	data_header->off = 0;
 
 	memcpy(&help_data[header_size], buffer, payload_size);	
-	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
+	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, PORT, ITF);		
 
 }
 
-void server_login_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player **p, char *buffer, int buffer_offset){
+void server_login_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player **p, char *buffer, int buffer_offset, u_char dst_mac[6]){
 
 	printf("[v] Respondendo requisição de login.\n");
 
@@ -594,11 +433,11 @@ void server_login_response(int sock, unsigned char *data, int data_size, char *d
 	data_header->off = 0;
 
 	memcpy(&help_data[header_size], buffer, payload_size);	
-	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
+	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, PORT, ITF);		
 
 }
 
-void server_use_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *p, char *buffer, int buffer_offset){
+void server_use_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *p, char *buffer, int buffer_offset, u_char dst_mac[6]){
 
 	printf("[v] Respondendo requisição de uso de objeto.\n");
 
@@ -635,12 +474,11 @@ void server_use_response(int sock, unsigned char *data, int data_size, char *dst
 	data_header->off = 0;
 
 	memcpy(&help_data[header_size], buffer, payload_size);	
-	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
+	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, PORT, ITF);		
 
 }
 
-void server_drop_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *player_list, char *buffer, int buffer_offset){
-
+void server_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *player_list, char *buffer, int buffer_offset, u_char dst_mac[6]){
 
 	struct data_t data_h;
 	memcpy(&data_h, data, sizeof(struct data_t));	
@@ -648,19 +486,32 @@ void server_drop_response(int sock, unsigned char *data, int data_size, char *ds
 	int name_size = data_size - sizeof(struct data_t);
 
 	char *value = malloc(sizeof(char) * name_size);
-	//value[name_size] = '\0';
 
 	memcpy(value, &data[offset], name_size);	
-		
-	printf("[v] Respondendo requisição de examinar.\n");
-	
-	unsigned char *help_data = malloc(300);
+			
+	int payload_size = 0;
+   
+	switch(data_h.cmd){
+			case DROP:
+				payload_size = server_drop(0, value, player_list, buffer);	
+				break;
+			case CATCH:
+			    payload_size = server_catch(0, value, player_list, buffer);	
+				break;
+			case MOVE:
+				payload_size = server_move(0, value, player_list, buffer);
+				break;
+			case EXAMINE:
+				payload_size = server_examine(0, value, player_list, buffer, buffer_offset);	
+				break;
+			case INVENTORY:
+				payload_size = server_show_inventary(0, player_list, buffer, 0);
+			    break;	
+	}
 
-	printf("%s\n", value);
-
-	int payload_size = server_drop(0, value, player_list, buffer);	
 	int header_size = sizeof(struct data_t);
 
+	unsigned char *help_data = malloc(300);
 	memset(help_data, 0, 0);
 
 	struct data_t *data_header = (struct data_t*)(help_data);
@@ -670,39 +521,11 @@ void server_drop_response(int sock, unsigned char *data, int data_size, char *ds
 	data_header->off = 0;
 
 	memcpy(&help_data[header_size], buffer, payload_size);	
-	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
+	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, PORT, ITF);		
 
 }
 
-
-void server_inventory_response(int sock, int user_id, int cmd, char *dst_ip, struct player *player_list){
-
-	printf("[v] Respondendo requisição de invetorio.\n");
-	
-	unsigned char *help_msg = malloc(200);
-	unsigned char *help_data = malloc(300);
-
- 	int payload_size = server_show_inventary(0, player_list, help_msg, 0); 
-
-	printf("%s (size = %d)\n", help_msg, payload_size);
-
-	int header_size = sizeof(struct data_t);
-
-	memset(help_data, 0, 0);
-
-	struct data_t *data_header = (struct data_t*)(help_data);
-	data_header->cmd = cmd;
-	data_header->id = user_id;
-	data_header->ack = 1;
-	data_header->off = 0;
-
-	memcpy(&help_data[header_size], help_msg, payload_size);	
-
-	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
-
-}
-
-void server_help_response(int sock, int cmd, int user_id, char dst_ip[]){
+void server_help_response(int sock, int cmd, int user_id, char dst_ip[], u_char dst_mac[6]){
 	
 	unsigned char *help_msg = malloc(200);
 	unsigned char *help_data = malloc(300);
@@ -722,46 +545,13 @@ void server_help_response(int sock, int cmd, int user_id, char dst_ip[]){
 
 	printf("[v] Respondendo requisição de ajuda.\n");
 
-	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
+	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, PORT, ITF);		
 	
 }
-
-void server_examine_response(int sock, unsigned char *data, int data_size, char *dst_ip,  struct player *player_list, char *buffer, int buffer_offset){
-
-	struct data_t data_h;
-	memcpy(&data_h, data, sizeof(struct data_t));	
-	int offset = sizeof(struct data_t);
-	int name_size = data_size - sizeof(struct data_t);
-
-	char *value = malloc(sizeof(char) * name_size);
-	
-	memcpy(value, &data[offset], name_size);	
-		
-	printf("[v] Respondendo requisição de examinar.\n");
-	
-	unsigned char *help_data = malloc(300);
-
-	int payload_size = server_examine(0, value, player_list, buffer, buffer_offset);	
-	
-	int header_size = sizeof(struct data_t);
-
-	memset(help_data, 0, 0);
-
-	struct data_t *data_header = (struct data_t*)(help_data);
-	data_header->cmd = data_h.cmd;
-	data_header->id = data_h.id;
-	data_header->ack = 1;
-	data_header->off = 0;
-
-	memcpy(&help_data[header_size], buffer, payload_size);	
-	send_udp(sock, dst_ip, help_data, header_size + payload_size, PORT, ITF);		
-
-}
-	
 
 int main(){
 
-    printf("------------- Simple RPG -------------- \n");
+    printf("------------- Simple RPG Server -------------- \n");
 
     struct player *p = NULL;	
 
@@ -831,10 +621,9 @@ int main(){
 					break;
 				case HELP:
                     break;
-                //default:
-                //   printf("Comando desconhecido.\n");
+                default:
+                   printf("Comando desconhecido.\n");
             }
-
         }
 
     }else{
@@ -886,13 +675,12 @@ int main(){
             int offset = 0;
 
             // Limpa buffer de dados.
-            // TODO Usar tamanho máximo fixo do buffer? Eis a questão.
             memset(data, 0, 300);
             
             printf("[v] Aguardando requisição...\n");
             // Pega um pacote qualquer endereçado ao servidor.	
             
-            unsigned char *user_mac = malloc(6);
+            u_char *user_mac = malloc(6);
             char *user_ip = malloc(16);
 
             if((data_size = get_packet(rsock, PORT, ITF, -1, data, user_ip, user_mac)) > 0){
@@ -906,45 +694,48 @@ int main(){
 
 				char *buffer = malloc(400*sizeof(char));
 
-				
-
 				if(p == NULL && data_h.cmd != LOGIN){
 					printf("[x] Player não inicializado.\n");
 					continue;
 				}
 
+				printf("[v] Processando comando.\n");
+
                 switch(data_h.cmd){
                     case EXAMINE:
-                    	server_examine_response(ssock, data, data_size, user_ip, p, buffer, 0);
+                    	server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac);
 						break;
                     case MOVE:
-						server_move_response(ssock, data, data_size, user_ip, p, buffer, 0);
+						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac);
                         break;	
                     case CATCH:
-						server_catch_response(ssock, data, data_size, user_ip, p, buffer, 0);
+						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac);
                         break;
                     case DROP:
-						server_drop_response(ssock, data, data_size, user_ip, p, buffer, 0);
+						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac);
                         break;
                     case INVENTORY:
-						server_inventory_response(ssock, data_h.id, data_h.cmd, user_ip, p);
+						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac);
 						break;
-                    case USE:	
-						server_use_response(ssock, data, data_size, user_ip, p, buffer, 0);
+                    case USE:
+						// TODO um parametro carrega dois valores	
+						server_use_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac);
                         break;
-                    case LOGIN: 
-						server_login_response(ssock, data, data_size, user_ip, &p, buffer, 0);
+                    case LOGIN:
+					    // TODO endereço de ponteiro	
+						server_login_response(ssock, data, data_size, user_ip, &p, buffer, 0, user_mac);
 						break;
                     case NEXT: 
-						server_next_response(ssock, data, data_size, user_ip, &p, buffer, 0);
+						server_next_response(ssock, data, data_size, user_ip, &p, buffer, 0, user_mac);
 						break;
                     case HELP:
-                        server_help_response(ssock, data_h.cmd, data_h.id, user_ip);
+                        // TODO não tem paramtro
+						server_help_response(ssock, data_h.cmd, data_h.id, user_ip, user_mac);
                         break;
-                    //default:
-                    //    printf("[x] Solicitação com código desconhecido\n");
+                    default:
+                        printf("[x] Solicitação com código desconhecido\n");
                 }
-
+				
             }
         }
 

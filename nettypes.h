@@ -1,9 +1,5 @@
 /*
- * Trabalho de Redes de Computadores II - CC/PUCRS
- *
- * Alunos: João Chagas e Jovani Brasil
- * Professora: Ana Benso
- *
+ * Autor: Jovani Brasil.
  *
  */
 
@@ -42,24 +38,9 @@ struct data_t {
 
 	int cmd; // Comando a ser executado.
 	int id;  // Identificação da sessão aberta.
-	int ack; // Flack de confirmação
+	int ack; // Flag de confirmação
 	int off; // Para carregar duas porções de dados no mesmo pack.
 
 };
-
-struct arp_header
-{
-        unsigned short ar_hrd;
-        unsigned short ar_pro;
-        unsigned char ar_hln;
-        unsigned char  ar_pln;
-        unsigned short ar_op;
-        unsigned char ar_sha[6];
-        unsigned char ar_sip[4];
-        unsigned char ar_tha[6];
-        unsigned char ar_tip[4];
-};
-
-
 
 #endif

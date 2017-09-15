@@ -1,3 +1,8 @@
+/*
+ * Autor: Jovani Brasil.
+ *
+ */
+
 #ifndef _GAMETYPES_
 #define _GAMETYPES_
 

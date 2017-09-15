@@ -1,198 +1,11 @@
-#include "game.h"
-
-
-const char* stage_intro(int stage){
-
-    switch(stage){
-        case STAGE0:
-            return "STAGE 0 \n	Você deu mole e agora está perdido dentro de um castelo. Tente se salvar, mas cuidado, esse castelo guarda muitas supresas. A saída deste nível fica na porta leste da sala C.\n";
-        case STAGE1:
-            return "STAGE 1 \n	Saia deste nível. A saída fica na porta norte da sala E.\n";
-		default:
-			return "[x] Identificador da fase inválido.";
-    }
-
-}
-
-const char* stage_final(int stage){
-
-    switch(stage){
-        case STAGE0:
-            return "Muito bem! \n	Este nível foi fácil. Vamos ver como você se sai no proximo.\n Digite proximo para seguir para o próximo nível.";
-        case STAGE1:
-            return "Muito bem! \n	Você saiu do castelo. Na verdade você se deu bem pois não tive tempo de fazer mais fases. Digite proximo para voltar ao inicio.";
-		default:
-			return "[x] Identificador de fase inválido.";
-    }
-
-}
-
-const char* get_map(int stage){
-
-    switch(stage){
-        case STAGE0:
-            return "\n----- ------- -----\n| D |=|  B  |=| C |\n----- ------- -----\n        | |\n       -----\n       | A |\n       -----\n";
-
-        case STAGE1:
-            return "\n-----\n| E |\n-----\n  ||\n----- ------- -----\n| D |=|  B  |=| C |\n----- ------- -----\n        | |\n       -----\n       | A |\n       -----\n";
-		default:
-			return "[x] Identificador de fase inválido.";
-    }
-
-}
-
-const char* description(int type){
-
-    switch(type){
-        case MAP:
-            return "Mapa da saída secreta.";
-        case FLASHLIGHT:
-            return "Lanterna com bateria infinita.";
-        case KEY: 
-            return "Chave secreta multiuso.";
-		default:
-			return "[x] Tipo de objeto inválido.";
-    }
-
-}
-
-const char* name(int type){
-
-    switch(type){
-        case MAP:
-            return "Mapa";
-        case FLASHLIGHT:
-            return "Lanterna";
-        case KEY: 
-            return "Chave";
-		default:
-			return "[x] Tipo de objeto inválido.";
-    }
-
-}
-
-const char* get_dir_str(int dir){
-
-    switch(dir){
-        case NORTH:
-            return "Norte";
-        case SOUTH:
-            return "Sul";
-        case EAST: 
-            return "Leste";
-		case WEST:
-			return "Oeste";
-		default:
-			return "[x] Direção inválida.";
-    }
-
-}
-
-int get_dir_type(char cmd[]){
-
-	char *cmd_aux = lower_case(cmd);
-
-    if(!strcmp(cmd_aux, "norte")){
-        return NORTH;
-    }else if(!strcmp(cmd_aux, "n")){
-        return NORTH;
-    }else if(!strcmp(cmd_aux, "leste")){
-        return EAST;
-    }else if(!strcmp(cmd_aux, "l")){
-        return EAST;
-    }else if(!strcmp(cmd_aux, "sul")){
-        return SOUTH;
-    }else if(!strcmp(cmd_aux, "s")){
-    	return SOUTH;
-	}else if(!strcmp(cmd_aux, "oeste")){
-        return WEST;
-    }else if(!strcmp(cmd_aux, "o")){
-    	return WEST;
-    }else{
-		return INVALID_ARG;
-	}	
-
-}
-
-const char* door_state(int state){
-
-    switch(state){
-        case OPEN:
-            return "Aberto";
-        case CLOSE:
-            return "Fechado";
-		default:
-			return "[x] Estado não encontrado.";
-    }
-
-}
-
-
-
 /*
- *
- * Métodos auxiliares
+ * Autor: Jovani Brasil.
  *
  */
 
-char* lower_case(char cmd[]){
-    // Reduz todos os caracteres para minúsculo.
-    int size = strlen(cmd); 
-    int i;
-    for(i=0; i<size;i++)
-        cmd[i] = tolower(cmd[i]);
-    return cmd;
-}
 
-
-
-int get_cmd_type(char cmd[]){
-    
-    char *cmd_aux = lower_case(cmd);
-
-    if(!strcmp(cmd_aux, "examinar")){
-        return EXAMINE;
-    }else if(!strcmp(cmd_aux, "pegar")){
-        return CATCH;
-    }else if(!strcmp(cmd_aux, "largar")){
-        return DROP;
-    }else if(!strcmp(cmd_aux, "mover")){
-        return MOVE;
-    }else if(!strcmp(cmd_aux, "inventario")){
-        return INVENTORY;
-    }else if(!strcmp(cmd_aux, "ajuda")){
-    	return HELP;
-	}else if(!strcmp(cmd_aux, "usar")){
-		return USE;
-	}else if(!strcmp(cmd_aux, "proximo")){
-    	return NEXT;
-	}else if(!strcmp(cmd_aux, "login")){
-		return LOGIN;
-	}else{
-		return INVALID_ARG;
-	}	
-
-}
-
-int get_obj_type(char cmd[]){
-
-    char *cmd_aux = lower_case(cmd);
-
-	printf("[v] cmd_param lowered = %s.\n", cmd_aux);
-
-    if(!strcmp(cmd_aux, "mapa")){
-        return MAP;
-    }else if(!strcmp(cmd_aux, "lanterna")){
-        return FLASHLIGHT;
-    }else if(!strcmp(cmd_aux, "chave")){
-        return KEY;
-	}else if(!strcmp(cmd_aux, "sala")){
-		return ROOM;
-    }else{
-		return INVALID_ARG;		
-	}
-
-}
+#include "game.h"
+#include "gameutils.h"
 
 /*
  *
@@ -356,6 +169,7 @@ int to_string_room_itens(struct room *rm, char *buffer, int offset){
 	}
 
     while(iit != NULL){
+		strcat(str, "	");
         strcat(str, name(iit->my_item->type));
         strcat(str, "\n"); 
         iit = iit->next_item;
@@ -363,9 +177,7 @@ int to_string_room_itens(struct room *rm, char *buffer, int offset){
     }
 
     int size = strlen(str);
-
 	memcpy(buffer, str, size);    
-
     return size;
 
 }
@@ -426,7 +238,7 @@ int to_string_room_doors(struct room *rm, char *buffer, int buffer_offset){
 
 	while(rd_aux){
  
-        strcat(str, "Porta ");
+        strcat(str, "	Porta ");
 		strcat(str, get_dir_str(rd_aux->dir));
 		strcat(str, "(");
 		strcat(str, door_state(rd_aux->door->state));	
@@ -447,24 +259,68 @@ int to_string_room_doors(struct room *rm, char *buffer, int buffer_offset){
  *
  * Game functions implementation.
  *
- * Here we have only the game layer.
- *
  */
 
-int game_examine_room(struct player *p, struct game *game){
-    char *buffer = malloc(200*sizeof(char));
+int game_examine_room(struct player *p, struct game *game, char *buffer){
     
-    /// Show room itens.
-    to_string_room_itens(p->actual_room, buffer, 0);
+	char str[100];	
 
-    // TODO Show online player in the same room.
+	// Busca por item lanterna no inventario do jogador
+	struct item *it = get_player_item_by_id(p, FLASHLIGHT);
 
-    
+	// Se não há luz e lanterna está desligada
+	if(p->actual_room->light_state == LIGHT_OFF){
+		if(it == NULL){
+    		strcpy(str, "Não há condição de examinar a sala. Não há luz.\n");
+			int size = strlen(str);
+    		memcpy(buffer, str, size);    
+			return size;
+		}
+		else if(it->state == LIGHT_OFF){
+			strcpy(str ,"Não há condição de examinar a sala. Não há luz.\n");
+			int size = strlen(str);
+    		memcpy(buffer, str, size);    
+			return size;
+		}
+	}
+
+	int len = strlen(p->actual_room->description);  
+	memcpy(buffer, p->actual_room->description, len);		
+	int offset = to_string_room_itens(p->actual_room, buffer+len, 0) + len;
+							
+	return to_string_room_doors(p->actual_room, buffer, offset);
 
 }
 
-int game_examine_item(struct item *it){
-	// TODO
+int game_examine_item(struct player *p, int obj_type, char *buffer){
+
+		char str[300];
+
+		// Busca objeto na sala em que o player está.
+		struct item *it = get_room_item_by_type(p->actual_room, obj_type);  
+	
+		// Objeto também pode estar no inventário.
+		if(!it)
+			it = get_player_item_by_id(p, obj_type);
+
+		if(it){
+			strcpy(str, description(it->type));
+			
+			if(it->type == MAP){
+				strcat(str, get_map(p->stage));
+				strcat(str, "Você está na sala ");
+				strcat(str, p->actual_room->description);
+				strcat(str, ".\n");
+			}
+			
+			}else{
+			strcpy(str, "Objeto não foi encontrado.\n");
+		}
+
+		int size = strlen(str);
+		memcpy(buffer, str, size);    
+		return size;
+
 }
 
 int game_show_inventary(struct player *p, char *buffer){
@@ -479,10 +335,6 @@ int game_catch(struct player *p, struct item *it){
 int game_drop(struct player *p, struct item *it){
     remove_player_item(p, it);
     add_room_item(p->actual_room, it);
-}
-
-int game_move(){
-   // TODO 
 }
 
 /*
@@ -554,8 +406,6 @@ int game_help(char *buffer, int buffer_offset){
 	strcat(str, "Largar [objeto]\n");
 	strcat(str, "Inventário\n");
 	strcat(str, "Usar [objeto] {alvo}\n");
-	strcat(str, "Falar [texto]\n");
-	strcat(str, "Cochichar [texto] [jogador]\n");
 	strcat(str, "Ajuda\n");	
 
     int size = strlen(str);

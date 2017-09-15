@@ -1,3 +1,7 @@
+/*
+ * Autor: Jovani Brasil.
+ *
+ */
 
 #ifndef _GAME_
 #define _GAME_
@@ -59,8 +63,10 @@ int to_string_room_doors(struct room *rm, char *buffer, int buffer_offset);
  *
  */
 
-int game_examine_room(struct player *p, struct game *game);
-int game_examine_item(struct item *it);
+
+
+int game_examine_room(struct player *p, struct game *game, char *buffer); 
+int game_examine_item(struct player *p, int obj_type, char *buffer);
 int game_show_inventary(struct player *p, char *buffer);
 int game_catch(struct player *p, struct item *it);
 int game_drop(struct player *p, struct item *it);

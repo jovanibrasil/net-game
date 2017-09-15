@@ -1,16 +1,5 @@
 /*
- * Trabalho de Redes de Computadores II - CC/PUCRS
- *
- * Alunos: João Chagas e Jovani Brasil
- * Professora: Ana Benso
- *
- *
- * host.c
- *
- * TODO documentation
- *
- *
- *
+ * Autor: Jovani Brasil.
  *
  */
 
