@@ -249,10 +249,6 @@ int get_ethernet(unsigned char *buff, char *host_mac, uint32_t host_ip,  int typ
 
 	memcpy(&ethernet_header, buff, sizeof(ethernet_header));
 
-	// TODO MAC destino do pacote deve ser o MAC do host.
-	//memcpy(dst_mac, ethernet_header.ether_shost, 6);
-
-
 	dst_mac[0] = ethernet_header.ether_shost[0];
 	dst_mac[1] = ethernet_header.ether_shost[1];
 	dst_mac[2] = ethernet_header.ether_shost[2];

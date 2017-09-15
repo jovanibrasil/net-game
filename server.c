@@ -369,7 +369,7 @@ int server_use(int player_id, char *obj_name, char *targ_name, struct player *pl
 
 }
 
-void server_next_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player **p, char *buffer, int buffer_offset, u_char dst_mac[6], char itf_name[]){
+void server_next_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player **p, char *buffer, int buffer_offset, u_char dst_mac[6], char itf_name[], int port){
 
 	printf("[v] Respondendo requisição de próxima fase.\n");
 
@@ -398,11 +398,11 @@ void server_next_response(int sock, unsigned char *data, int data_size, char *ds
 	data_header->off = 0;
 
 	memcpy(&help_data[header_size], buffer, payload_size);	
-	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, PORT, itf_name);		
+	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, port, itf_name);		
 
 }
 
-void server_login_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player **p, char *buffer, int buffer_offset, u_char dst_mac[6], char itf_name[]){
+void server_login_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player **p, char *buffer, int buffer_offset, u_char dst_mac[6], char itf_name[], int port){
 
 	printf("[v] Respondendo requisição de login.\n");
 
@@ -433,11 +433,11 @@ void server_login_response(int sock, unsigned char *data, int data_size, char *d
 	data_header->off = 0;
 
 	memcpy(&help_data[header_size], buffer, payload_size);	
-	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, PORT, itf_name);		
+	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, port, itf_name);		
 
 }
 
-void server_use_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *p, char *buffer, int buffer_offset, u_char dst_mac[6], char itf_name[]){
+void server_use_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *p, char *buffer, int buffer_offset, u_char dst_mac[6], char itf_name[], int port){
 
 	printf("[v] Respondendo requisição de uso de objeto.\n");
 
@@ -474,11 +474,11 @@ void server_use_response(int sock, unsigned char *data, int data_size, char *dst
 	data_header->off = 0;
 
 	memcpy(&help_data[header_size], buffer, payload_size);	
-	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, PORT, itf_name);		
+	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, port, itf_name);		
 
 }
 
-void server_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *player_list, char *buffer, int buffer_offset, u_char dst_mac[6], char itf_name[]){
+void server_response(int sock, unsigned char *data, int data_size, char *dst_ip, struct player *player_list, char *buffer, int buffer_offset, u_char dst_mac[6], char itf_name[], int port){
 
 	struct data_t data_h;
 	memcpy(&data_h, data, sizeof(struct data_t));	
@@ -521,11 +521,11 @@ void server_response(int sock, unsigned char *data, int data_size, char *dst_ip,
 	data_header->off = 0;
 
 	memcpy(&help_data[header_size], buffer, payload_size);	
-	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, PORT, itf_name);		
+	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, port, itf_name);		
 
 }
 
-void server_help_response(int sock, int cmd, int user_id, char dst_ip[], u_char dst_mac[6], char itf_name[]){
+void server_help_response(int sock, int cmd, int user_id, char dst_ip[], u_char dst_mac[6], char itf_name[], int port){
 	
 	unsigned char *help_msg = malloc(200);
 	unsigned char *help_data = malloc(300);
@@ -545,7 +545,7 @@ void server_help_response(int sock, int cmd, int user_id, char dst_ip[], u_char 
 
 	printf("[v] Respondendo requisição de ajuda.\n");
 
-	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, PORT, itf_name);		
+	send_udp(sock, dst_ip, dst_mac, help_data, header_size + payload_size, port, itf_name);		
 	
 }
 
@@ -643,13 +643,24 @@ int main(){
  		int on;
    		struct ifreq ifr;
 
-	// Pergunta qual a interface a ser utilizada
+	// Pergunta qual a interface e porta a serem utilizadas
 	char itf_name[7];
-	
-	printf("Entre com: <nome_da_interface> \n"); 
-	fgets(itf_name, 7, stdin);
+	int port;
 
-        // Abrindo socket para recebimento de dados.
+	char *input = malloc(sizeof(char) *20);
+
+	printf("Entre com: <nome_interface> <porta> (ou entre com 'default') \n"); 
+	fgets(input, 20, stdin);
+	sscanf(input, "%s %d" , itf_name, &port);  
+
+	if(!strcmp(itf_name, "default")){
+		u_char mac_aux[6] =  { 0x08, 0x00 , 0x27 , 0xd0, 0x9a, 0x92 };
+		// Isto é feio :(
+		port = 23453;
+		strcpy(itf_name, "enp0s3");
+	}
+
+	// Abrindo socket para recebimento de dados.
         printf("[v] Inicializando sockets com a interface %s.\n", itf_name);
    	
    		if((rsock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {	
@@ -691,7 +702,7 @@ int main(){
             u_char *user_mac = malloc(6);
             char *user_ip = malloc(16);
 
-            if((data_size = get_packet(rsock, PORT, itf_name, -1, data, user_ip, user_mac)) > 0){
+            if((data_size = get_packet(rsock, port, itf_name, -1, data, user_ip, user_mac)) > 0){
 
                 printf("[?] Servidor recebeu uma nova requisição do MAC: ");
                 print_mac(user_mac);
@@ -711,34 +722,31 @@ int main(){
 
                 switch(data_h.cmd){
                     case EXAMINE:
-                    	server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name);
+                    	server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name, port);
 						break;
                     case MOVE:
-						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name);
+						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name, port);
                         break;	
                     case CATCH:
-						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name);
+						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name, port);
                         break;
                     case DROP:
-						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name);
+						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name, port);
                         break;
                     case INVENTORY:
-						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name);
+						server_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name, port);
 						break;
                     case USE:
-						// TODO um parametro carrega dois valores	
-						server_use_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name);
+			server_use_response(ssock, data, data_size, user_ip, p, buffer, 0, user_mac, itf_name, port);
                         break;
                     case LOGIN:
-					    // TODO endereço de ponteiro	
-						server_login_response(ssock, data, data_size, user_ip, &p, buffer, 0, user_mac, itf_name);
+			server_login_response(ssock, data, data_size, user_ip, &p, buffer, 0, user_mac, itf_name, port);
 						break;
                     case NEXT: 
-						server_next_response(ssock, data, data_size, user_ip, &p, buffer, 0, user_mac, itf_name);
+						server_next_response(ssock, data, data_size, user_ip, &p, buffer, 0, user_mac, itf_name, port);
 						break;
                     case HELP:
-                        // TODO não tem paramtro
-						server_help_response(ssock, data_h.cmd, data_h.id, user_ip, user_mac, itf_name);
+						server_help_response(ssock, data_h.cmd, data_h.id, user_ip, user_mac, itf_name, port);
                         break;
                     default:
                         printf("[x] Solicitação com código desconhecido\n");
