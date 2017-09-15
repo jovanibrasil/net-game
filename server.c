@@ -555,10 +555,12 @@ int main(){
 
     struct player *p = NULL;	
 
-    printf("Select the operation mode: server test(t) or server run(r)");
-    int c = getchar();
+    char r[5];
 
-    if(c == 't'){
+    printf("Select the operation mode: server test(t) or server run(r)\n");
+    fgets(r, 5, stdin);
+
+    if(!strcmp(r, "t")){
 		
 		/*
 		 * Modo de teste. Utilizado para debug da implementação da lógica
@@ -642,13 +644,13 @@ int main(){
    		struct ifreq ifr;
 
 	// Pergunta qual a interface a ser utilizada
-	char itf_name[50];
-
+	char itf_name[7];
+	
 	printf("Entre com: <nome_da_interface> \n"); 
-	fgets(itf_name, 50, stdin);
+	fgets(itf_name, 7, stdin);
 
         // Abrindo socket para recebimento de dados.
-        printf("[v] Inicializando sockets.\n");
+        printf("[v] Inicializando sockets com a interface %s.\n", itf_name);
    	
    		if((rsock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {	
             printf("Erro na criacao do socket.\n");
