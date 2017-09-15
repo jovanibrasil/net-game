@@ -28,7 +28,6 @@
 #define BUFFSIZE 1518
 #define SHOW_HEADERS2
 
-#define PORT 23453
 #define ETH_LENGTH 6
 
 struct data_t {

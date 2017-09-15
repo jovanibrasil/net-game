@@ -215,7 +215,7 @@ int get_ipv4(unsigned char *buff, int offset, uint32_t host_ip, int type, int de
 	// Se checksum é inválido, descarta o pacote.
 	if(check != htons(ip_header.ip_sum)){
 		//printf("checksum not ok\n");
-		return -1;
+		//return -1;
 	}else{
 		//printf("checksum ok\n");
 	}

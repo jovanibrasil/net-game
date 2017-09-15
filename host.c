@@ -35,7 +35,7 @@
  * são os contidos no cabeçalho de dados.
  *
  */
-void send_udp_without_extra_data(int sock, int cmd, int user_id, char srv_ip[], u_char srv_mac[6], char itf_name[]){
+void send_udp_without_extra_data(int sock, int cmd, int user_id, char srv_ip[], u_char srv_mac[6], char itf_name[], int port){
 		
 		// Alocando e inicializando buffer de dados.		
 		int header_size = sizeof(struct data_t);
@@ -49,7 +49,7 @@ void send_udp_without_extra_data(int sock, int cmd, int user_id, char srv_ip[], 
 		data_header->ack = 0;
 		data_header->off = 0;
 
-		send_udp(sock, srv_ip, srv_mac, data, header_size, PORT, itf_name);			
+		send_udp(sock, srv_ip, srv_mac, data, header_size, port, itf_name);			
 
 }
 
@@ -60,7 +60,7 @@ void send_udp_without_extra_data(int sock, int cmd, int user_id, char srv_ip[], 
  * em anexo.
  *
  */
-void send_udp_with_extra_data(int sock, int cmd, int user_id, char param1[], int off, char srv_ip[], u_char srv_mac[6], char itf_name[]){
+void send_udp_with_extra_data(int sock, int cmd, int user_id, char param1[], int off, char srv_ip[], u_char srv_mac[6], char itf_name[], int port){
 
 		// Alocando e inicializando buffer de dados.		
 		int header_size = sizeof(struct data_t);
@@ -77,7 +77,7 @@ void send_udp_with_extra_data(int sock, int cmd, int user_id, char param1[], int
 
 		memcpy(data+header_size, param1, payload_size);	
 
-		send_udp(sock, srv_ip, srv_mac, data, header_size + payload_size, PORT, itf_name);		
+		send_udp(sock, srv_ip, srv_mac, data, header_size + payload_size, port, itf_name);		
 				
 }
 
@@ -85,14 +85,14 @@ void send_udp_with_extra_data(int sock, int cmd, int user_id, char param1[], int
  * Recebe um pacote udp do tipo especificado.
  *
  */
-void get_udp_packet(int sock, int cmd, char *dst_ip, char *dst_mac, char itf_name[]){
+void get_udp_packet(int sock, int cmd, char *dst_ip, char *dst_mac, char itf_name[], int port){
 
 	int offset = 0, data_size;				
 
 	unsigned char *data = (unsigned char*)malloc(300); 
 	memset(data, 0, 300);			
 
-	if((data_size = get_packet(sock, PORT, itf_name, cmd, data, dst_ip, dst_mac)) > 0){
+	if((data_size = get_packet(sock, port, itf_name, cmd, data, dst_ip, dst_mac)) > 0){
 				
 		struct data_t data_h;
 		memcpy(&data_h, data, sizeof(struct data_t));
@@ -138,21 +138,22 @@ int main(int argc,char *argv[]){
 	u_char srv_mac[6];
 	char srv_ip[16];
 	char itf_name[20];
+	int port;
 	char *input = malloc(sizeof(char) *200);
 
 	printf("Entre com: <mac> <ip> <port> <nome_da_interface> (ou entre com 'default') \n"); 
 	fgets(input, 200, stdin);
-	sscanf(input, "%s %s %s", srv_mac, srv_ip, itf_name);  
+	sscanf(input, "%s %s %d %s", srv_mac, srv_ip, &port, itf_name);  
 
 	if(!strcmp(srv_mac, "default")){
 		u_char mac_aux[6] =  { 0x08, 0x00 , 0x27 , 0xd0, 0x9a, 0x92 };
-		// Isto é feio :(
 		srv_mac[0] = 0x08;
 		srv_mac[1] = 0x00;
 		srv_mac[2] = 0x27;
 		srv_mac[3] = 0xd0;
 		srv_mac[4] = 0x9a;
 		srv_mac[5] = 0x92;
+		port = 23453;
 		strcpy(srv_ip, "10.0.0.100");
 		strcpy(itf_name, "wlp6s0");
 	}
@@ -181,7 +182,7 @@ int main(int argc,char *argv[]){
 
 	memcpy(data+header_size, input_login, payload_size);	
 	
-	send_udp_with_extra_data(ssock, 0x07, 0, data, 0, srv_ip, srv_mac, itf_name);
+	send_udp_with_extra_data(ssock, 0x07, 0, data, 0, srv_ip, srv_mac, itf_name, port);
 
 	// Limpa buffer de dados.
 	int offset = 0, data_size;				
@@ -190,7 +191,7 @@ int main(int argc,char *argv[]){
 	memset(input, 0, 200);
 
 	// Captura um resposta de login.
-	get_udp_packet(rsock, LOGIN, dst_ip, dst_mac, itf_name);
+	get_udp_packet(rsock, LOGIN, dst_ip, dst_mac, itf_name, port);
 
 	dst_ip = malloc(16);
 	dst_mac = malloc(6);
@@ -210,40 +211,39 @@ int main(int argc,char *argv[]){
 
 		int cmd_type = get_cmd_type(cmd);	
 
-		// TODO validação do next
-
 		switch(cmd_type){
 			case EXAMINE:
-				send_udp_with_extra_data(ssock, cmd_type, 0, param1, 0, srv_ip, srv_mac, itf_name);
+				send_udp_with_extra_data(ssock, cmd_type, 0, param1, 0, srv_ip, srv_mac, itf_name, port);
 				break;
 			case INVENTORY:
-				send_udp_without_extra_data(ssock, cmd_type, 0, srv_ip, srv_mac, itf_name);
+				send_udp_without_extra_data(ssock, cmd_type, 0, srv_ip, srv_mac, itf_name, port);
 				break;
 			case CATCH:
-				send_udp_with_extra_data(ssock, cmd_type, 0, param1, 0, srv_ip, srv_mac, itf_name);
+				send_udp_with_extra_data(ssock, cmd_type, 0, param1, 0, srv_ip, srv_mac, itf_name, port);
 				break;
 			case DROP:
-				send_udp_with_extra_data(ssock, cmd_type, 0, param1, 0, srv_ip, srv_mac, itf_name);
+				send_udp_with_extra_data(ssock, cmd_type, 0, param1, 0, srv_ip, srv_mac, itf_name, port);
 				break;
 			case MOVE:
-				send_udp_with_extra_data(ssock, cmd_type, 0, param1, 0, srv_ip, srv_mac, itf_name);
+				send_udp_with_extra_data(ssock, cmd_type, 0, param1, 0, srv_ip, srv_mac, itf_name, port);
 				break;
 			case HELP:
-				send_udp_without_extra_data(ssock, cmd_type, 0, srv_ip, srv_mac, itf_name);
+				send_udp_without_extra_data(ssock, cmd_type, 0, srv_ip, srv_mac, itf_name, port);
 				break;
 			case USE:
 				strcpy(temp, param1);
 				strcat(temp, param2);
-				send_udp_with_extra_data(ssock, cmd_type, 0, temp, strlen(param1), srv_ip, srv_mac, itf_name);
+				send_udp_with_extra_data(ssock, cmd_type, 0, temp, strlen(param1), srv_ip, srv_mac, itf_name, port);
 				break;
 			case  NEXT:
-				send_udp_without_extra_data(ssock, cmd_type, 0, srv_ip, srv_mac, itf_name);
+				// Faltou validação por parte do servidor para este comando.
+				send_udp_without_extra_data(ssock, cmd_type, 0, srv_ip, srv_mac, itf_name, port);
 				break;
 			default:
 				continue;
 		}
 
-		get_udp_packet(rsock, cmd_type, dst_ip, dst_mac, itf_name);
+		get_udp_packet(rsock, cmd_type, dst_ip, dst_mac, itf_name, port);
 
 	}
 
