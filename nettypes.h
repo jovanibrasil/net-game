@@ -29,9 +29,6 @@
 #define SHOW_HEADERS2
 
 #define PORT 23453
-#define ITF "wlp6s0"
-#define SERVER_IP "127.0.0.1"
-
 #define ETH_LENGTH 6
 
 struct data_t {

@@ -12,13 +12,6 @@
 #include "netutils.h"
 #include "nettypes.h"
 
-#define DESTMAC0	0x08
-#define DESTMAC1	0x00
-#define DESTMAC2	0x27
-#define DESTMAC3	0xd0
-#define DESTMAC4	0x9a
-#define DESTMAC5	0x92
-
 /*
  * 
  *	Checksum routine for Internet Protocol family headers (C Version)
@@ -113,9 +106,6 @@ int send_udp(int sock, char *dst_ip, u_char mac_dst[6], unsigned char *data, int
 	memcpy(&eth_header->h_source, if_mac.ifr_hwaddr.sa_data, sizeof(char)*6);
 	
 	memcpy(eth_header->h_dest, mac_dst, 6);
-
-    printf("MAC dest: %x:%x:%x:%x:%x:%x\n", DESTMAC0, DESTMAC1, DESTMAC2, DESTMAC3, DESTMAC4, DESTMAC5);
-
 	eth_header->h_proto = htons(ETH_P_IP);
    
 	len += sizeof(struct ethhdr);	
@@ -130,7 +120,6 @@ int send_udp(int sock, char *dst_ip, u_char mac_dst[6], unsigned char *data, int
 	ip_header->protocol = 17;
 	ip_header->saddr = inet_addr(inet_ntoa((((struct sockaddr_in *)&(if_ip.ifr_addr))->sin_addr)));
 	inet_pton(AF_INET, dst_ip, &(ip_header->daddr));	
-
 	len += sizeof(struct iphdr); 
 
 	// Cabeçalho UDP.
